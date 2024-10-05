@@ -125,10 +125,9 @@ if uploaded_file is not None:
                 sns.pairplot(df[y_axis])
                 st.pyplot()  # Special handling since pairplot creates multiple subplots
                 plt.clf()
-                return
-
-            st.pyplot(plt)
-            plt.clf()  # Clear the figure after plotting to avoid overlap
+            else:
+                st.pyplot(plt)
+                plt.clf()  # Clear the figure after plotting to avoid overlap
 
         # Additional Features: Display statistics
         st.subheader("📈 Data Statistics")
