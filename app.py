@@ -71,10 +71,10 @@ if uploaded_file is not None:
 
         # Select plot type
         plot_type = st.sidebar.selectbox("Select Plot Type",
-                                         options=["Scatter Plot", "Line Chart", "Bar Chart", "Histogram", "Box Plot", "Heatmap", "Pair Plot"])
+                                         options=["Scatter Plot", "Line Chart", "Bar Chart", "Histogram", "Box Plot", "Heatmap", "Pair Plot", "Violin Plot", "Area Chart", "Count Plot"])
 
         # Optional: Select color (for applicable plots)
-        color_option = st.sidebar.selectbox("Select Color (optional)", options=[None] + all_columns) if plot_type in ["Scatter Plot", "Line Chart", "Bar Chart"] else None
+        color_option = st.sidebar.selectbox("Select Color (optional)", options=[None] + all_columns) if plot_type in ["Scatter Plot", "Line Chart", "Bar Chart", "Violin Plot", "Area Chart"] else None
 
         # Optional: Select grouping (for bar plot)
         group_option = st.sidebar.selectbox("Select Grouping (optional)", options=[None] + all_columns) if plot_type == "Bar Chart" else None
@@ -125,6 +125,26 @@ if uploaded_file is not None:
                 sns.pairplot(df[y_axis])
                 st.pyplot()  # Special handling since pairplot creates multiple subplots
                 plt.clf()
+            
+            elif plot_type == "Violin Plot":
+                sns.violinplot(data=df, x=x_axis, y=y_axis[0], hue=color_option, split=True, palette='muted')
+                plt.xlabel(x_axis)
+                plt.ylabel(y_axis[0])
+                plt.title(f"Violin Plot of {y_axis[0]} by {x_axis}")
+
+            elif plot_type == "Area Chart":
+                plt.fill_between(df[x_axis], df[y_axis[0]], color='skyblue', alpha=0.4)
+                plt.plot(df[x_axis], df[y_axis[0]], color='Slateblue', alpha=0.6)
+                plt.xlabel(x_axis)
+                plt.ylabel(y_axis[0])
+                plt.title(f"Area Chart of {y_axis[0]} over {x_axis}")
+
+            elif plot_type == "Count Plot":
+                sns.countplot(data=df, x=x_axis, hue=color_option, palette='viridis')
+                plt.xlabel(x_axis)
+                plt.ylabel("Count")
+                plt.title(f"Count Plot of {x_axis}")
+
             else:
                 st.pyplot(plt)
                 plt.clf()  # Clear the figure after plotting to avoid overlap
