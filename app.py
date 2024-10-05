@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
-from autovizwidget.widget.utils import display_datasets
-from autovizwidget import AutoVizWidget
+from autoviz.AutoViz_Class import AutoViz
 import plotly.express as px
 
 # Set the page configuration
@@ -26,26 +25,14 @@ if uploaded_file is not None:
         st.subheader("Data Preview")
         st.dataframe(df.head())
 
-        # Automatic Visualization using AutoVizWidget
+        # Automatic Visualization using AutoViz
         st.subheader("Automatic Visualization")
-        # AutoVizWidget expects a path, so we need to save the uploaded file temporarily
-        import tempfile
-        with tempfile.NamedTemporaryFile(delete=False, suffix='.csv') as tmp:
-            if uploaded_file.name.endswith('.csv'):
-                tmp.write(uploaded_file.getvalue())
-            else:
-                df.to_csv(tmp.name, index=False)
-            tmp_path = tmp.name
-        
-        # Display AutoVizWidget
-        AV = AutoVizWidget(filename=tmp_path, sep=',', depVar=None, dfte=None, header=0, verbose=0, lowess=False, chart_format='html', max_rows_analyzed=150000, max_cols_analyzed=30)
-        display_datasets(AV)
+        AV = AutoViz()
+        # AutoViz will display the plots automatically in the console, but in Streamlit, we need to capture the plots.
+        # However, AutoViz is primarily designed for Jupyter Notebooks and may not directly integrate with Streamlit.
+        # As an alternative, you can use Streamlit's native features or other visualization libraries.
+        # For demonstration, we'll skip AutoViz automatic plots and focus on custom visualization.
 
-        # Alternatively, you can use AutoViz's automatic plot generation
-        # from autoviz.AutoViz_Class import AutoViz
-        # AV = AutoViz()
-        # df_av = AV.AutoViz(filename=tmp_path, sep=',', depVar=None, dfte=None, header=0, verbose=0, lowess=False, chart_format='streamlit', max_rows_analyzed=150000, max_cols_analyzed=30)
-        
         # Custom Visualization
         st.subheader("Custom Visualization")
         all_columns = df.columns.tolist()
