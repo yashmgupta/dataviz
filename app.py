@@ -38,6 +38,9 @@ if uploaded_file is not None:
             report_content = f.read()
         st.components.v1.html(report_content, height=1000, scrolling=True)
 
+        # Optionally, remove the temporary file
+        os.remove(report_html)
+
         # Custom Visualization
         st.subheader("Custom Visualization")
         all_columns = df.columns.tolist()
