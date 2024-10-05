@@ -48,16 +48,21 @@ if uploaded_file is not None:
         # Perform automatic analysis
         analysis = perform_auto_analysis(df)
 
-        # Display auto-analysis results
-        st.subheader("📊 Automatic Data Analysis")
-        st.write(f"**Dataset Shape:** {analysis['shape']}")
-        st.write(f"**Columns:** {', '.join(analysis['columns'])}")
-        st.write("**Missing Values:**")
-        st.write(analysis['missing_values'])
-        st.write("**Data Types:**")
-        st.write(analysis['data_types'])
-        st.write("**Summary Statistics:**")
-        st.write(pd.DataFrame(analysis['summary_statistics']))
+        # Sidebar for analysis options
+        st.sidebar.header("⚙️ Analysis Options")
+        show_analysis = st.sidebar.checkbox("Show Automatic Analysis Details")
+
+        if show_analysis:
+            # Display auto-analysis results if selected
+            st.subheader("📊 Automatic Data Analysis")
+            st.write(f"**Dataset Shape:** {analysis['shape']}")
+            st.write(f"**Columns:** {', '.join(analysis['columns'])}")
+            st.write("**Missing Values:**")
+            st.write(analysis['missing_values'])
+            st.write("**Data Types:**")
+            st.write(analysis['data_types'])
+            st.write("**Summary Statistics:**")
+            st.write(pd.DataFrame(analysis['summary_statistics']))
 
         # Sidebar for selecting columns and plot type
         st.sidebar.header("📈 Plotting Options")
