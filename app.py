@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 from autoviz.AutoViz_Class import AutoViz
 import plotly.express as px
+import tempfile
 
 # Set the page configuration
 st.set_page_config(page_title="Auto Data Plotting App", layout="wide")
@@ -28,10 +29,28 @@ if uploaded_file is not None:
         # Automatic Visualization using AutoViz
         st.subheader("Automatic Visualization")
         AV = AutoViz()
-        # AutoViz will display the plots automatically in the console, but in Streamlit, we need to capture the plots.
-        # However, AutoViz is primarily designed for Jupyter Notebooks and may not directly integrate with Streamlit.
-        # As an alternative, you can use Streamlit's native features or other visualization libraries.
-        # For demonstration, we'll skip AutoViz automatic plots and focus on custom visualization.
+        # AutoViz needs a file path; use a temporary file
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.csv') as tmp:
+            if uploaded_file.name.endswith('.csv'):
+                tmp.write(uploaded_file.getvalue())
+            else:
+                df.to_csv(tmp.name, index=False)
+            tmp_path = tmp.name
+        
+        # Generate the AutoViz report
+        report = AV.AutoViz(
+            filename=tmp_path,
+            sep=",",
+            depVar=None,
+            dfte=None,
+            header=0,
+            verbose=0,
+            lowess=False,
+            chart_format='streamlit',  # Use 'streamlit' for compatibility
+            max_rows_analyzed=150000,
+            max_cols_analyzed=30
+        )
+        # AutoViz handles displaying plots itself
 
         # Custom Visualization
         st.subheader("Custom Visualization")
