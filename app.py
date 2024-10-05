@@ -5,6 +5,11 @@ import seaborn as sns
 import tempfile
 import os
 import numpy as np
+from sklearn.decomposition import PCA
+from sklearn.preprocessing import StandardScaler
+from sklearn.cluster import KMeans
+from sklearn.linear_model import LinearRegression
+import scipy.stats as stats
 
 # Set the page configuration
 st.set_page_config(page_title="Professional Data Analysis App", layout="wide")
@@ -57,12 +62,66 @@ if uploaded_file is not None:
             st.subheader("📊 Automatic Data Analysis")
             st.write(f"**Dataset Shape:** {analysis['shape']}")
             st.write(f"**Columns:** {', '.join(analysis['columns'])}")
-            st.write("**Missing Values:**")
+            st.write("**Missing Values:")
             st.write(analysis['missing_values'])
             st.write("**Data Types:**")
             st.write(analysis['data_types'])
             st.write("**Summary Statistics:**")
             st.write(pd.DataFrame(analysis['summary_statistics']))
+
+        # Sidebar for selecting advanced analysis options
+        st.sidebar.header("🔍 Advanced Analysis Options")
+        if st.sidebar.checkbox("Perform PCA (Principal Component Analysis)"):
+            st.subheader("🔍 Principal Component Analysis (PCA)")
+            n_components = st.sidebar.slider("Number of Components", 1, min(len(df.columns), 10), 2)
+            numeric_df = df.select_dtypes(include=[np.number]).dropna()
+            scaler = StandardScaler()
+            scaled_data = scaler.fit_transform(numeric_df)
+            pca = PCA(n_components=n_components)
+            pca_result = pca.fit_transform(scaled_data)
+            pca_df = pd.DataFrame(data=pca_result, columns=[f'PC{i+1}' for i in range(n_components)])
+            st.write(pca_df.head())
+            plt.figure(figsize=(10, 6))
+            sns.scatterplot(x='PC1', y='PC2', data=pca_df)
+            plt.title("PCA Result - First Two Principal Components")
+            st.pyplot(plt)
+
+        if st.sidebar.checkbox("Perform Clustering (K-Means)"):
+            st.subheader("🔍 K-Means Clustering")
+            n_clusters = st.sidebar.slider("Number of Clusters", 2, 10, 3)
+            numeric_df = df.select_dtypes(include=[np.number]).dropna()
+            scaler = StandardScaler()
+            scaled_data = scaler.fit_transform(numeric_df)
+            kmeans = KMeans(n_clusters=n_clusters, random_state=42)
+            kmeans.fit(scaled_data)
+            df['Cluster'] = kmeans.labels_
+            st.write(df[['Cluster']].value_counts().reset_index(name='Count'))
+            plt.figure(figsize=(10, 6))
+            sns.scatterplot(x=numeric_df.columns[0], y=numeric_df.columns[1], hue=df['Cluster'], palette='viridis', data=df)
+            plt.title("K-Means Clustering Result")
+            st.pyplot(plt)
+
+        if st.sidebar.checkbox("Outlier Detection"):
+            st.subheader("🔍 Outlier Detection")
+            selected_column = st.sidebar.selectbox("Select Column for Outlier Detection", df.select_dtypes(include=[np.number]).columns)
+            threshold = st.sidebar.slider("Z-Score Threshold", 1.0, 5.0, 3.0)
+            z_scores = np.abs(stats.zscore(df[selected_column].dropna()))
+            outliers = df[z_scores > threshold]
+            st.write(f"Number of Outliers in {selected_column}: {len(outliers)}")
+            st.write(outliers)
+
+        if st.sidebar.checkbox("Perform Regression Analysis"):
+            st.subheader("🔍 Regression Analysis")
+            target = st.sidebar.selectbox("Select Target Variable", options=all_columns)
+            features = st.sidebar.multiselect("Select Feature Variables", options=[col for col in all_columns if col != target])
+            if len(features) > 0:
+                X = df[features].select_dtypes(include=[np.number]).dropna()
+                y = df[target].dropna()
+                model = LinearRegression()
+                model.fit(X, y)
+                st.write(f"Intercept: {model.intercept_}")
+                st.write(f"Coefficients: {dict(zip(features, model.coef_))}")
+                st.write(f"R^2 Score: {model.score(X, y)}")
 
         # Sidebar for selecting columns and plot type
         st.sidebar.header("📈 Plotting Options")
