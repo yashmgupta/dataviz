@@ -24,8 +24,8 @@ To run this application locally, you need to have Python installed along with so
 
 1. Clone the repository:
    ```sh
-   git clone <repository_url>
-   cd <repository_folder>
+   git clone https://github.com/yashmgupta/dataviz
+   cd dataviz
    ```
 
 2. Install the required dependencies:
