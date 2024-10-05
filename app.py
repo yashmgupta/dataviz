@@ -1,14 +1,15 @@
 import streamlit as st
 import pandas as pd
-from autoviz.AutoViz_Class import AutoViz
+import sweetviz as sv
 import plotly.express as px
 import tempfile
+import os
 
 # Set the page configuration
 st.set_page_config(page_title="Auto Data Plotting App", layout="wide")
 
 # Title of the app
-st.title("Auto Data Plotting with AutoViz and Streamlit")
+st.title("Auto Data Plotting with Sweetviz and Streamlit")
 
 # File upload
 uploaded_file = st.file_uploader("Upload a CSV or Excel file", type=["csv", "xlsx"])
@@ -26,31 +27,16 @@ if uploaded_file is not None:
         st.subheader("Data Preview")
         st.dataframe(df.head())
 
-        # Automatic Visualization using AutoViz
-        st.subheader("Automatic Visualization")
-        AV = AutoViz()
-        # AutoViz needs a file path; use a temporary file
-        with tempfile.NamedTemporaryFile(delete=False, suffix='.csv') as tmp:
-            if uploaded_file.name.endswith('.csv'):
-                tmp.write(uploaded_file.getvalue())
-            else:
-                df.to_csv(tmp.name, index=False)
-            tmp_path = tmp.name
-        
-        # Generate the AutoViz report
-        report = AV.AutoViz(
-            filename=tmp_path,
-            sep=",",
-            depVar=None,
-            dfte=None,
-            header=0,
-            verbose=0,
-            lowess=False,
-            chart_format='streamlit',  # Use 'streamlit' for compatibility
-            max_rows_analyzed=150000,
-            max_cols_analyzed=30
-        )
-        # AutoViz handles displaying plots itself
+        # Generate Sweetviz report
+        st.subheader("Sweetviz Report")
+        report = sv.analyze(df)
+        report_html = "sweetviz_report.html"
+        report.show_html(report_html)
+
+        # Display the Sweetviz report in Streamlit
+        with open(report_html, 'r', encoding='utf-8') as f:
+            report_content = f.read()
+        st.components.v1.html(report_content, height=1000, scrolling=True)
 
         # Custom Visualization
         st.subheader("Custom Visualization")
