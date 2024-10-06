@@ -249,4 +249,146 @@ if uploaded_file is not None:
                         )
                         plt.xlabel(x_axis)
                         plt.ylabel(x_axis)
-  
+                        plt.title(f"Line Chart of {x_axis}")
+
+                elif plot_type == "Bar Chart":
+                    if y_axis:
+                        sns.barplot(
+                            data=df,
+                            x=x_axis,
+                            y=y_axis[0],
+                            hue=group_option if group_option else None,
+                            palette='viridis',
+                            alpha=0.7
+                        )
+                        plt.xlabel(x_axis)
+                        plt.ylabel(y_axis[0])
+                        plt.title(f"{y_axis[0]} by {x_axis}")
+                        plt.xticks(rotation=45, ha='right')
+                    else:
+                        sns.barplot(
+                            data=df,
+                            x=x_axis,
+                            y=x_axis,
+                            hue=group_option if group_option else None,
+                            palette='viridis',
+                            alpha=0.7
+                        )
+                        plt.xlabel(x_axis)
+                        plt.ylabel(x_axis)
+                        plt.title(f"Bar Chart of {x_axis}")
+                        plt.xticks(rotation=45, ha='right')
+
+                elif plot_type == "Histogram":
+                    sns.histplot(df[x_axis].dropna(), bins=20, color='skyblue', edgecolor='black', kde=True)
+                    plt.xlabel(x_axis)
+                    plt.ylabel("Frequency")
+                    plt.title(f"Histogram of {x_axis}")
+
+                elif plot_type == "Box Plot":
+                    if y_axis:
+                        sns.boxplot(data=df[y_axis])
+                        plt.ylabel("Values")
+                        plt.title(f"Box Plot of {', '.join(y_axis)}")
+                    else:
+                        sns.boxplot(x=df[x_axis])
+                        plt.xlabel(x_axis)
+                        plt.title(f"Box Plot of {x_axis}")
+
+                elif plot_type == "Heatmap":
+                    correlation = df.select_dtypes(include=[np.number]).corr()
+                    sns.heatmap(correlation, annot=True, cmap='coolwarm', linewidths=0.5)
+                    plt.title("Correlation Heatmap")
+
+                elif plot_type == "Pair Plot":
+                    if color_option:
+                        sns.pairplot(df, hue=color_option, vars=y_axis if y_axis else all_columns, palette='viridis')
+                    else:
+                        sns.pairplot(df, vars=y_axis if y_axis else all_columns, palette='viridis')
+                    st.pyplot()
+                    plt.clf()
+                    st.stop()  # Stop further plotting since pairplot is already rendered
+
+                elif plot_type == "Violin Plot":
+                    if y_axis:
+                        sns.violinplot(
+                            data=df,
+                            x=x_axis,
+                            y=y_axis[0],
+                            hue=color_option if color_option else None,
+                            split=True if color_option else False,
+                            palette='muted'
+                        )
+                        plt.xlabel(x_axis)
+                        plt.ylabel(y_axis[0])
+                        plt.title(f"Violin Plot of {y_axis[0]} by {x_axis}")
+                    else:
+                        sns.violinplot(
+                            data=df,
+                            x=x_axis,
+                            y=x_axis,
+                            hue=color_option if color_option else None,
+                            split=True if color_option else False,
+                            palette='muted'
+                        )
+                        plt.xlabel(x_axis)
+                        plt.ylabel(x_axis)
+                        plt.title(f"Violin Plot of {x_axis}")
+
+                elif plot_type == "Area Chart":
+                    if y_axis:
+                        for column in y_axis:
+                            plt.fill_between(df[x_axis], df[column], alpha=0.4, label=column)
+                            plt.plot(df[x_axis], df[column], alpha=0.6)
+                        plt.xlabel(x_axis)
+                        plt.ylabel("Values")
+                        plt.title(f"Area Chart of {', '.join(y_axis)} over {x_axis}")
+                        plt.legend()
+                    else:
+                        plt.fill_between(df[x_axis], df[x_axis], color='skyblue', alpha=0.4)
+                        plt.plot(df[x_axis], df[x_axis], color='Slateblue', alpha=0.6)
+                        plt.xlabel(x_axis)
+                        plt.ylabel(x_axis)
+                        plt.title(f"Area Chart of {x_axis} over {x_axis}")
+
+                elif plot_type == "Count Plot":
+                    sns.countplot(
+                        data=df,
+                        x=x_axis,
+                        hue=color_option if color_option else None,
+                        palette='viridis'
+                    )
+                    plt.xlabel(x_axis)
+                    plt.ylabel("Count")
+                    plt.title(f"Count Plot of {x_axis}")
+
+                # Apply additional legend customizations if applicable
+                if plot_type not in ["Pair Plot"]:
+                    if color_option or shape_option or symbol_option:
+                        plt.legend(title='Legend')
+                    else:
+                        plt.legend().remove()
+
+                st.pyplot(plt)
+                plt.clf()  # Clear the figure after plotting to avoid overlap
+
+            except ValueError as ve:
+                st.error(f"❌ Plotting error: {ve}. Please check if the selected columns are suitable for the chosen plot type.")
+
+        # Additional Features: Display statistics
+        st.subheader("📈 Data Statistics")
+        st.write(df.describe(include='all'))
+
+        # Optionally, allow users to download the data
+        csv = df.to_csv(index=False).encode('utf-8')
+        st.download_button(
+            label="💾 Download Data as CSV",
+            data=csv,
+            file_name='data.csv',
+            mime='text/csv',
+        )
+
+    except Exception as e:
+        st.error(f"❌ An error occurred: {e}")
+else:
+    st.info("🗒️ Please upload a CSV or Excel file to get started.")
