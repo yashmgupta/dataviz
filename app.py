@@ -62,7 +62,7 @@ if uploaded_file is not None:
             st.subheader("📊 Automatic Data Analysis")
             st.write(f"**Dataset Shape:** {analysis['shape']}")
             st.write(f"**Columns:** {', '.join(analysis['columns'])}")
-            st.write("**Missing Values:")
+            st.write("**Missing Values:**")
             st.write(analysis['missing_values'])
             st.write("**Data Types:**")
             st.write(analysis['data_types'])
@@ -95,39 +95,58 @@ if uploaded_file is not None:
             kmeans = KMeans(n_clusters=n_clusters, random_state=42)
             kmeans.fit(scaled_data)
             df['Cluster'] = kmeans.labels_
-            st.write(df[['Cluster']].value_counts().reset_index(name='Count'))
+            st.write(df['Cluster'].value_counts().reset_index(name='Count').rename(columns={'index': 'Cluster'}))
             plt.figure(figsize=(10, 6))
-            sns.scatterplot(x=numeric_df.columns[0], y=numeric_df.columns[1], hue=df['Cluster'], palette='viridis', data=df)
-            plt.title("K-Means Clustering Result")
-            st.pyplot(plt)
+            if numeric_df.shape[1] >= 2:
+                sns.scatterplot(x=numeric_df.columns[0], y=numeric_df.columns[1], hue='Cluster', palette='viridis', data=df)
+                plt.title("K-Means Clustering Result")
+                st.pyplot(plt)
+            else:
+                st.warning("🔔 Need at least two numerical columns for clustering visualization.")
 
         if st.sidebar.checkbox("Outlier Detection"):
             st.subheader("🔍 Outlier Detection")
-            selected_column = st.sidebar.selectbox("Select Column for Outlier Detection", df.select_dtypes(include=[np.number]).columns)
-            threshold = st.sidebar.slider("Z-Score Threshold", 1.0, 5.0, 3.0)
-            z_scores = np.abs(stats.zscore(df[selected_column].dropna()))
-            outliers = df[z_scores > threshold]
-            st.write(f"Number of Outliers in {selected_column}: {len(outliers)}")
-            st.write(outliers)
+            numeric_columns = df.select_dtypes(include=[np.number]).columns.tolist()
+            if numeric_columns:
+                selected_column = st.sidebar.selectbox("Select Column for Outlier Detection", numeric_columns)
+                threshold = st.sidebar.slider("Z-Score Threshold", 1.0, 5.0, 3.0)
+                z_scores = np.abs(stats.zscore(df[selected_column].dropna()))
+                outliers = df[z_scores > threshold]
+                st.write(f"Number of Outliers in `{selected_column}`: {len(outliers)}")
+                st.write(outliers)
+            else:
+                st.warning("🔔 No numerical columns available for Outlier Detection.")
 
         if st.sidebar.checkbox("Perform Regression Analysis"):
             st.subheader("🔍 Regression Analysis")
-            target = st.sidebar.selectbox("Select Target Variable", options=all_columns)
-            features = st.sidebar.multiselect("Select Feature Variables", options=[col for col in all_columns if col != target])
+            all_columns = df.columns.tolist()
+            numeric_columns = df.select_dtypes(include=[np.number]).columns.tolist()
+            target = st.sidebar.selectbox("Select Target Variable", options=numeric_columns)
+            features = st.sidebar.multiselect("Select Feature Variables", options=[col for col in numeric_columns if col != target])
             if len(features) > 0:
-                X = df[features].select_dtypes(include=[np.number]).dropna()
+                X = df[features].dropna()
                 y = df[target].dropna()
+                # Align X and y
+                X, y = X.align(y, join='inner', axis=0)
                 model = LinearRegression()
                 model.fit(X, y)
-                st.write(f"Intercept: {model.intercept_}")
-                st.write(f"Coefficients: {dict(zip(features, model.coef_))}")
-                st.write(f"R^2 Score: {model.score(X, y)}")
+                st.write(f"**Intercept:** {model.intercept_}")
+                st.write("**Coefficients:**")
+                coeff_df = pd.DataFrame({
+                    'Feature': features,
+                    'Coefficient': model.coef_
+                })
+                st.write(coeff_df)
+                st.write(f"**R² Score:** {model.score(X, y)}")
+            else:
+                st.warning("🔔 Please select at least one feature for Regression Analysis.")
 
         # Sidebar for selecting columns and plot type
         st.sidebar.header("📈 Plotting Options")
 
-        # Select X-axis
         all_columns = df.columns.tolist()
+
+        # Select X-axis
         x_axis = st.sidebar.selectbox("Select X-axis", options=all_columns)
 
         # Select Y-axis (multiple selections for some plot types)
@@ -137,8 +156,12 @@ if uploaded_file is not None:
         plot_type = st.sidebar.selectbox("Select Plot Type",
                                          options=["Scatter Plot", "Line Chart", "Bar Chart", "Histogram", "Box Plot", "Heatmap", "Pair Plot", "Violin Plot", "Area Chart", "Count Plot"])
 
-        # Optional: Select color (for applicable plots)
-        color_option = st.sidebar.selectbox("Select Color (optional)", options=[None] + all_columns) if plot_type in ["Scatter Plot", "Line Chart", "Bar Chart", "Violin Plot", "Area Chart"] else None
+        # Optional: Select Color, Shape, and Symbol for legends
+        st.sidebar.subheader("🎨 Customize Legends")
+
+        color_option = st.sidebar.selectbox("Select Color (optional)", options=[None] + all_columns)
+        shape_option = st.sidebar.selectbox("Select Shape (optional)", options=[None] + all_columns)
+        symbol_option = st.sidebar.selectbox("Select Symbol (optional)", options=[None] + all_columns)
 
         # Optional: Select grouping (for bar plot)
         group_option = st.sidebar.selectbox("Select Grouping (optional)", options=[None] + all_columns) if plot_type == "Bar Chart" else None
@@ -146,40 +169,69 @@ if uploaded_file is not None:
         # Generate Plot button
         if st.sidebar.button("Generate Plot"):
             st.subheader(f"📊 {plot_type}")
-            
+
             # Plotting with Seaborn for enhanced visuals
             plt.figure(figsize=(12, 6))
 
             try:
                 if plot_type == "Scatter Plot":
-                    sns.scatterplot(data=df, x=x_axis, y=y_axis[0], hue=color_option, palette='viridis', alpha=0.7)
+                    sns.scatterplot(
+                        data=df,
+                        x=x_axis,
+                        y=y_axis[0] if y_axis else None,
+                        hue=color_option,
+                        style=shape_option,
+                        markers=True if shape_option else False,
+                        palette='viridis',
+                        alpha=0.7
+                    )
                     plt.xlabel(x_axis)
-                    plt.ylabel(y_axis[0])
-                    plt.title(f"{y_axis[0]} vs {x_axis}")
+                    plt.ylabel(y_axis[0] if y_axis else "")
+                    plt.title(f"{y_axis[0]} vs {x_axis}" if y_axis else f"Scatter Plot of {x_axis}")
 
                 elif plot_type == "Line Chart":
-                    sns.lineplot(data=df, x=x_axis, y=y_axis[0], hue=color_option)
+                    sns.lineplot(
+                        data=df,
+                        x=x_axis,
+                        y=y_axis[0] if y_axis else None,
+                        hue=color_option,
+                        style=shape_option,
+                        markers=True if shape_option else False,
+                        palette='viridis'
+                    )
                     plt.xlabel(x_axis)
-                    plt.ylabel(y_axis[0])
-                    plt.title(f"{y_axis[0]} over {x_axis}")
+                    plt.ylabel(y_axis[0] if y_axis else "")
+                    plt.title(f"{y_axis[0]} over {x_axis}" if y_axis else f"Line Chart of {x_axis}")
 
                 elif plot_type == "Bar Chart":
-                    sns.barplot(data=df, x=x_axis, y=y_axis[0], hue=group_option, alpha=0.7)
+                    sns.barplot(
+                        data=df,
+                        x=x_axis,
+                        y=y_axis[0] if y_axis else None,
+                        hue=group_option,
+                        palette='viridis',
+                        alpha=0.7
+                    )
                     plt.xlabel(x_axis)
-                    plt.ylabel(y_axis[0])
-                    plt.title(f"{y_axis[0]} by {x_axis}")
+                    plt.ylabel(y_axis[0] if y_axis else "")
+                    plt.title(f"{y_axis[0]} by {x_axis}" if y_axis else f"Bar Chart of {x_axis}")
                     plt.xticks(rotation=45, ha='right')
 
                 elif plot_type == "Histogram":
-                    sns.histplot(df[x_axis], bins=20, color='skyblue', edgecolor='black')
+                    sns.histplot(df[x_axis].dropna(), bins=20, color='skyblue', edgecolor='black', kde=True)
                     plt.xlabel(x_axis)
                     plt.ylabel("Frequency")
                     plt.title(f"Histogram of {x_axis}")
 
                 elif plot_type == "Box Plot":
-                    sns.boxplot(data=df[y_axis])
-                    plt.ylabel("Values")
-                    plt.title(f"Box Plot of {', '.join(y_axis)}")
+                    if y_axis:
+                        sns.boxplot(data=df[y_axis])
+                        plt.ylabel("Values")
+                        plt.title(f"Box Plot of {', '.join(y_axis)}")
+                    else:
+                        sns.boxplot(x=df[x_axis])
+                        plt.xlabel(x_axis)
+                        plt.title(f"Box Plot of {x_axis}")
 
                 elif plot_type == "Heatmap":
                     correlation = df.select_dtypes(include=[np.number]).corr()
@@ -187,28 +239,57 @@ if uploaded_file is not None:
                     plt.title("Correlation Heatmap")
 
                 elif plot_type == "Pair Plot":
-                    sns.pairplot(df[y_axis])
-                    st.pyplot()  # Special handling since pairplot creates multiple subplots
+                    if y_axis:
+                        sns.pairplot(df[y_axis], hue=color_option, palette='viridis')
+                    else:
+                        sns.pairplot(df, hue=color_option, palette='viridis')
+                    st.pyplot()
                     plt.clf()
-                
+                    st.stop()  # Stop further plotting since pairplot is already rendered
+
                 elif plot_type == "Violin Plot":
-                    sns.violinplot(data=df, x=x_axis, y=y_axis[0], hue=color_option, split=True, palette='muted')
+                    sns.violinplot(
+                        data=df,
+                        x=x_axis,
+                        y=y_axis[0] if y_axis else None,
+                        hue=color_option,
+                        split=True if color_option else False,
+                        palette='muted'
+                    )
                     plt.xlabel(x_axis)
-                    plt.ylabel(y_axis[0])
-                    plt.title(f"Violin Plot of {y_axis[0]} by {x_axis}")
+                    plt.ylabel(y_axis[0] if y_axis else "")
+                    plt.title(f"Violin Plot of {y_axis[0]} by {x_axis}" if y_axis else f"Violin Plot of {x_axis}")
 
                 elif plot_type == "Area Chart":
-                    plt.fill_between(df[x_axis], df[y_axis[0]], color='skyblue', alpha=0.4)
-                    plt.plot(df[x_axis], df[y_axis[0]], color='Slateblue', alpha=0.6)
-                    plt.xlabel(x_axis)
-                    plt.ylabel(y_axis[0])
-                    plt.title(f"Area Chart of {y_axis[0]} over {x_axis}")
+                    if y_axis:
+                        for column in y_axis:
+                            plt.fill_between(df[x_axis], df[column], alpha=0.4, label=column)
+                            plt.plot(df[x_axis], df[column], alpha=0.6)
+                        plt.xlabel(x_axis)
+                        plt.ylabel("Values")
+                        plt.title(f"Area Chart of {', '.join(y_axis)} over {x_axis}")
+                        plt.legend()
+                    else:
+                        plt.fill_between(df[x_axis], df[x_axis], color='skyblue', alpha=0.4)
+                        plt.plot(df[x_axis], df[x_axis], color='Slateblue', alpha=0.6)
+                        plt.xlabel(x_axis)
+                        plt.ylabel(x_axis)
+                        plt.title(f"Area Chart of {x_axis} over {x_axis}")
 
                 elif plot_type == "Count Plot":
-                    sns.countplot(data=df, x=x_axis, hue=color_option, palette='viridis')
+                    sns.countplot(
+                        data=df,
+                        x=x_axis,
+                        hue=color_option,
+                        palette='viridis'
+                    )
                     plt.xlabel(x_axis)
                     plt.ylabel("Count")
                     plt.title(f"Count Plot of {x_axis}")
+
+                # Apply additional legend customizations if applicable
+                if plot_type not in ["Pair Plot"]:
+                    plt.legend(title='Legend' if (color_option or shape_option or symbol_option) else None)
 
                 st.pyplot(plt)
                 plt.clf()  # Clear the figure after plotting to avoid overlap
